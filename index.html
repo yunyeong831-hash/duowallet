@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>듀오월렛 — 커플 가계부</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --p1:#E8735A;--p1b:#C9573F;--p1l:#FDF0ED;--p1m:#F4C4B8;
+  --p2:#5B8DE8;--p2b:#3D6FCA;--p2l:#EDF2FD;
+  --bg:#FBF8F5;--card:#FFFFFF;--text:#2A2320;--muted:#A09590;
+  --border:#EDE8E3;--green:#3BAD76;--red:#E85A5A;--purple:#9B74E8;--gold:#D4A843;
+  --r:16px;--sh:0 2px 16px rgba(44,35,32,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+#loading{position:fixed;inset:0;background:linear-gradient(160deg,#FDF3F0,#EEF3FD);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+.loading-logo{font-family:'Gaegu',cursive;font-size:52px;color:var(--p1);margin-bottom:12px;animation:pulse 1.5s ease infinite}
+.loading-txt{font-size:14px;color:var(--muted)}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* AUTH */
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:linear-gradient(160deg,#FDF3F0 0%,#EEF3FD 50%,#FDF0ED 100%)}
+.auth-box{background:#fff;border-radius:28px;padding:48px 40px;width:100%;max-width:400px;
+  box-shadow:0 8px 48px rgba(44,35,32,.14);animation:fadeUp .5s ease}
+.logo{font-family:'Gaegu',cursive;font-size:44px;color:var(--p1);text-align:center;margin-bottom:6px}
+.logo-sub{text-align:center;font-size:13px;color:var(--muted);margin-bottom:36px}
+.auth-tab{display:grid;grid-template-columns:1fr 1fr;background:var(--border);border-radius:12px;padding:4px;margin-bottom:24px}
+.auth-tab-btn{padding:10px;border:none;border-radius:8px;background:transparent;
+  font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .2s}
+.auth-tab-btn.act{background:#fff;color:var(--p1);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.form-group{margin-bottom:16px}
+.form-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;display:block;margin-bottom:6px}
+.form-input{width:100%;padding:13px 14px;border:1.5px solid var(--border);border-radius:12px;
+  font-family:'Noto Sans KR',sans-serif;font-size:14px;color:var(--text);background:var(--bg);outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--p1);background:#fff}
+.btn-primary{width:100%;padding:15px;background:linear-gradient(135deg,var(--p1),var(--p1b));
+  color:#fff;border:none;border-radius:12px;font-family:'Noto Sans KR',sans-serif;
+  font-size:15px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;margin-top:4px}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(232,115,90,.4)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+.msg{font-size:12px;text-align:center;margin-top:10px;min-height:18px;line-height:1.5}
+.msg.err{color:var(--red)}
+.msg.ok{color:var(--green)}
+
+/* INVITE */
+#invite-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:linear-gradient(160deg,#FDF3F0 0%,#EEF3FD 50%,#FDF0ED 100%)}
+.invite-box{background:#fff;border-radius:28px;padding:40px 36px;width:100%;max-width:420px;
+  box-shadow:0 8px 48px rgba(44,35,32,.14);animation:fadeUp .5s ease;text-align:center}
+.invite-emoji{font-size:52px;margin-bottom:12px}
+.invite-title{font-family:'Gaegu',cursive;font-size:28px;color:var(--text);margin-bottom:8px}
+.invite-sub{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.7}
+.invite-link-box{background:var(--bg);border:1.5px dashed var(--border);border-radius:12px;
+  padding:12px 14px;font-size:12px;color:var(--text);word-break:break-all;margin-bottom:12px;text-align:left;line-height:1.5}
+.btn-copy{width:100%;padding:14px;background:var(--p1);color:#fff;border:none;border-radius:12px;
+  font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;transition:all .2s}
+.btn-copy:hover{background:var(--p1b)}
+.btn-skip{width:100%;padding:12px;background:transparent;color:var(--muted);border:1.5px solid var(--border);
+  border-radius:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;cursor:pointer;transition:all .2s}
+.btn-skip:hover{border-color:var(--p1);color:var(--p1)}
+
+/* APP */
+#app{display:none;min-height:100vh;padding-bottom:80px}
+.header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;height:58px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.h-logo{font-family:'Gaegu',cursive;font-size:26px;color:var(--p1)}
+.h-pair{display:flex;align-items:center;gap:6px}
+.h-badge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.b1{background:var(--p1l);color:var(--p1)}
+.b2{background:var(--p2l);color:var(--p2)}
+.b-solo{background:#F1EFE8;color:#5F5E5A}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);
+  display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom,0)}
+.bnav-btn{flex:1;padding:10px 4px 8px;border:none;background:transparent;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Noto Sans KR',sans-serif;
+  font-size:10px;color:var(--muted);transition:color .2s;border-top:3px solid transparent}
+.bnav-btn.act{color:var(--p1);border-top-color:var(--p1)}
+.bnav-icon{font-size:20px}
+.page{display:none;padding:20px;max-width:680px;margin:0 auto;animation:fadeIn .2s ease}
+.page.act{display:block}
+.mnav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:20px}
+.mnav-btn{width:36px;height:36px;border:1px solid var(--border);background:#fff;border-radius:10px;
+  cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh)}
+.mnav-label{font-family:'Gaegu',cursive;font-size:22px}
+.hero{background:linear-gradient(135deg,#E8735A 0%,#D4613D 40%,#5B8DE8 100%);
+  border-radius:22px;padding:28px 24px 24px;color:#fff;margin-bottom:18px;position:relative;overflow:hidden}
+.hero::before{content:'💑';position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:64px;opacity:.15}
+.hero-sub{font-size:12px;opacity:.82;margin-bottom:5px}
+.hero-total{font-family:'Gaegu',cursive;font-size:36px}
+.hero-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:18px}
+.hero-stat{background:rgba(255,255,255,.18);border-radius:12px;padding:10px 12px}
+.hs-l{font-size:10px;opacity:.8;margin-bottom:3px}
+.hs-v{font-size:15px;font-weight:600}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:400px){.mgrid{grid-template-columns:1fr}}
+.mcard{background:#fff;border-radius:var(--r);padding:18px;box-shadow:var(--sh);border-left:5px solid var(--p1)}
+.mcard.c2{border-left-color:var(--p2)}
+.mcard-name{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin-bottom:14px}
+.mc-dot{width:10px;height:10px;border-radius:50%;background:var(--p1)}
+.mc-dot.d2{background:var(--p2)}
+.mst{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.mst:last-child{border-bottom:none}
+.mst-l{color:var(--muted)}
+.mst-v{font-weight:600}
+.cg{color:var(--green)}.cr{color:var(--red)}.co{color:var(--gold)}
+.stitle{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px;margin-top:6px}
+.txlist{display:flex;flex-direction:column;gap:8px}
+.txitem{background:#fff;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh)}
+.tx-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.tx-body{flex:1;min-width:0}
+.tx-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.tx-r{text-align:right;flex-shrink:0}
+.tx-amt{font-size:15px;font-weight:700}
+.tx-who{font-size:10px;color:var(--muted);margin-top:2px}
+.del-btn{background:none;border:none;cursor:pointer;font-size:14px;color:var(--muted);padding:4px;opacity:0;transition:opacity .15s}
+.txitem:hover .del-btn{opacity:1}
+.empty{text-align:center;padding:48px 20px}
+.empty-ico{font-size:52px;margin-bottom:12px}
+.empty-txt{font-size:14px;color:var(--muted)}
+.who-toggle{display:grid;grid-template-columns:1fr 1fr;background:var(--border);border-radius:14px;padding:4px;margin-bottom:18px}
+.who-btn{padding:11px;border:none;border-radius:10px;background:transparent;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .2s}
+.who-btn.act{background:#fff;color:var(--p1);box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.who-btn.act.w2{color:var(--p2)}
+.fcard{background:#fff;border-radius:var(--r);padding:24px;box-shadow:var(--sh)}
+.fg{margin-bottom:18px}
+.flabel{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;display:block;margin-bottom:8px}
+.finput,.fselect{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;
+  font-family:'Noto Sans KR',sans-serif;font-size:14px;color:var(--text);background:var(--bg);outline:none;transition:border-color .2s}
+.finput:focus,.fselect:focus{border-color:var(--p1);background:#fff}
+.type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.type-btn{padding:12px 6px;border:2px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;text-align:center;transition:all .18s}
+.type-btn.sel{border-color:var(--p1);background:var(--p1l)}
+.tbi{font-size:22px;display:block;margin-bottom:4px}
+.tbt{font-size:11px;font-weight:600;color:var(--muted)}
+.type-btn.sel .tbt{color:var(--p1)}
+.cat-row{display:flex;flex-wrap:wrap;gap:6px}
+.cat-chip{padding:6px 13px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;background:#fff;color:var(--muted);transition:all .15s}
+.cat-chip.sel{background:var(--p1);border-color:var(--p1);color:#fff}
+.sub-btn{width:100%;padding:16px;background:linear-gradient(135deg,var(--p1),var(--p1b));
+  color:#fff;border:none;border-radius:12px;font-family:'Noto Sans KR',sans-serif;
+  font-size:15px;font-weight:700;cursor:pointer;transition:transform .15s;margin-top:4px}
+.sub-btn:hover{transform:translateY(-2px)}
+.sub-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.fchip{padding:6px 14px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;background:#fff;color:var(--muted);transition:all .15s}
+.fchip.act{background:var(--p1);border-color:var(--p1);color:#fff}
+.set-card{background:#fff;border-radius:var(--r);padding:20px;box-shadow:var(--sh);margin-bottom:14px}
+.set-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.set-row:last-child{border-bottom:none}
+.set-label{color:var(--muted);font-size:12px}
+.invite-card{background:linear-gradient(135deg,var(--p1l),var(--p2l));border-radius:var(--r);padding:20px;margin-bottom:14px;border:1px solid var(--border)}
+.invite-card-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.invite-card-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+.invite-url{background:#fff;border-radius:10px;padding:10px 12px;font-size:11px;color:var(--text);word-break:break-all;margin-bottom:10px;border:1px solid var(--border)}
+.btn-invite-copy{width:100%;padding:12px;background:var(--p1);color:#fff;border:none;border-radius:10px;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+.btn-logout{width:100%;padding:13px;background:transparent;color:var(--red);border:1.5px solid var(--red);border-radius:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--text);color:#fff;padding:12px 24px;border-radius:50px;font-size:13px;
+  font-weight:600;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="loading-logo">듀오월렛 💑</div>
+  <div class="loading-txt">불러오는 중...</div>
+</div>
+
+<!-- AUTH -->
+<div id="auth-screen" style="display:none">
+  <div class="auth-box">
+    <div class="logo">듀오월렛 💑</div>
+    <div class="logo-sub">각자 돈은 따로, 돈 관리는 같이</div>
+    <div class="auth-tab">
+      <button class="auth-tab-btn act" id="tab-login" onclick="switchTab('login')">로그인</button>
+      <button class="auth-tab-btn" id="tab-signup" onclick="switchTab('signup')">회원가입</button>
+    </div>
+    <div id="form-login">
+      <div class="form-group">
+        <label class="form-label">이메일</label>
+        <input class="form-input" type="email" id="login-email" placeholder="이메일 입력" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">비밀번호</label>
+        <input class="form-input" type="password" id="login-pw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-primary" onclick="doLogin()" id="login-btn">로그인</button>
+      <div class="msg err" id="login-err"></div>
+    </div>
+    <div id="form-signup" style="display:none">
+      <div class="form-group">
+        <label class="form-label">닉네임</label>
+        <input class="form-input" type="text" id="signup-name" placeholder="앱에서 표시될 이름" maxlength="10">
+      </div>
+      <div class="form-group">
+        <label class="form-label">이메일</label>
+        <input class="form-input" type="email" id="signup-email" placeholder="이메일 입력">
+      </div>
+      <div class="form-group">
+        <label class="form-label">비밀번호</label>
+        <input class="form-input" type="password" id="signup-pw" placeholder="6자 이상" onkeydown="if(event.key==='Enter')doSignup()">
+      </div>
+      <button class="btn-primary" onclick="doSignup()" id="signup-btn">가입하기</button>
+      <div class="msg err" id="signup-err"></div>
+      <div class="msg ok" id="signup-ok"></div>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE -->
+<div id="invite-screen" style="display:none">
+  <div class="invite-box">
+    <div class="invite-emoji">🔗</div>
+    <div class="invite-title">파트너를 초대할까요?</div>
+    <div class="invite-sub">아래 링크를 파트너에게 카카오톡으로 보내세요.<br>링크로 가입하면 자동으로 연결돼요.<br>나중에 설정에서도 보낼 수 있어요!</div>
+    <div class="invite-link-box" id="invite-url-display">링크 생성 중...</div>
+    <button class="btn-copy" onclick="copyInvite()">📋 링크 복사하기</button>
+    <button class="btn-skip" onclick="goApp()">혼자 먼저 써볼게요 →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header class="header">
+    <div class="h-logo">듀오월렛</div>
+    <div class="h-pair">
+      <span class="h-badge b1" id="hb1">나</span>
+      <span id="h-sep" style="color:var(--muted)">💗</span>
+      <span class="h-badge b2" id="hb2">파트너</span>
+    </div>
+  </header>
+
+  <div class="page act" id="pg-home">
+    <div class="mnav">
+      <button class="mnav-btn" onclick="shiftM(-1)">‹</button>
+      <span class="mnav-label" id="mlbl"></span>
+      <button class="mnav-btn" onclick="shiftM(1)">›</button>
+    </div>
+    <div class="hero">
+      <div class="hero-sub" id="h-sub">합산</div>
+      <div class="hero-total" id="h-total">₩0</div>
+      <div class="hero-row">
+        <div class="hero-stat"><div class="hs-l">수입</div><div class="hs-v" id="h-inc">₩0</div></div>
+        <div class="hero-stat"><div class="hs-l">지출</div><div class="hs-v" id="h-exp">₩0</div></div>
+        <div class="hero-stat"><div class="hs-l">잔액</div><div class="hs-v" id="h-bal">₩0</div></div>
+      </div>
+    </div>
+    <div class="mgrid">
+      <div class="mcard">
+        <div class="mcard-name"><div class="mc-dot"></div><span id="mn1">나</span></div>
+        <div class="mst"><span class="mst-l">수입</span><span class="mst-v cg" id="c1i">₩0</span></div>
+        <div class="mst"><span class="mst-l">지출</span><span class="mst-v cr" id="c1e">₩0</span></div>
+        <div class="mst"><span class="mst-l">잔액</span><span class="mst-v co" id="c1b">₩0</span></div>
+      </div>
+      <div class="mcard c2" id="mcard2">
+        <div class="mcard-name"><div class="mc-dot d2"></div><span id="mn2">파트너</span></div>
+        <div class="mst"><span class="mst-l">수입</span><span class="mst-v cg" id="c2i">₩0</span></div>
+        <div class="mst"><span class="mst-l">지출</span><span class="mst-v cr" id="c2e">₩0</span></div>
+        <div class="mst"><span class="mst-l">잔액</span><span class="mst-v co" id="c2b">₩0</span></div>
+      </div>
+    </div>
+    <div class="stitle">최근 내역</div>
+    <div class="txlist" id="home-list"></div>
+  </div>
+
+  <div class="page" id="pg-input">
+    <div class="who-toggle" id="who-toggle">
+      <button class="who-btn act" id="wb1" onclick="setWho(1)"><span id="wbt1">나</span></button>
+      <button class="who-btn w2" id="wb2" onclick="setWho(2)"><span id="wbt2">파트너</span></button>
+    </div>
+    <div class="fcard">
+      <div class="fg">
+        <span class="flabel">유형</span>
+        <div class="type-grid">
+          <div class="type-btn sel" onclick="setType('income',this)"><span class="tbi">💚</span><span class="tbt">수입</span></div>
+          <div class="type-btn" onclick="setType('expense',this)"><span class="tbi">❤️</span><span class="tbt">지출</span></div>
+          <div class="type-btn" onclick="setType('invest',this)"><span class="tbi">💜</span><span class="tbt">투자</span></div>
+          <div class="type-btn" onclick="setType('asset',this)"><span class="tbi">💛</span><span class="tbt">자산</span></div>
+        </div>
+      </div>
+      <div class="fg"><span class="flabel">카테고리</span><div class="cat-row" id="cat-row"></div></div>
+      <div class="fg"><span class="flabel">날짜</span><input class="finput" type="date" id="f-date"></div>
+      <div class="fg"><span class="flabel">내용</span><input class="finput" type="text" id="f-memo" placeholder="예: 월급, 마트, 주식 매수..."></div>
+      <div class="fg"><span class="flabel">금액 (원)</span><input class="finput" type="number" id="f-amt" placeholder="0" min="0"></div>
+      <div class="fg"><span class="flabel">메모 (선택)</span><input class="finput" type="text" id="f-note" placeholder="추가 메모"></div>
+      <button class="sub-btn" id="sub-btn" onclick="addRecord()">+ 추가하기</button>
+    </div>
+  </div>
+
+  <div class="page" id="pg-hist">
+    <div class="mnav">
+      <button class="mnav-btn" onclick="shiftM(-1)">‹</button>
+      <span class="mnav-label" id="mlbl2"></span>
+      <button class="mnav-btn" onclick="shiftM(1)">›</button>
+    </div>
+    <div class="filter-bar">
+      <div class="fchip act" onclick="setFilter('all',this)">전체</div>
+      <div class="fchip" onclick="setFilter('mine',this)" id="fp1">내 내역</div>
+      <div class="fchip" onclick="setFilter('partner',this)" id="fp2">파트너</div>
+      <div class="fchip" onclick="setFilter('income',this)">수입</div>
+      <div class="fchip" onclick="setFilter('expense',this)">지출</div>
+      <div class="fchip" onclick="setFilter('invest',this)">투자</div>
+    </div>
+    <div class="txlist" id="hist-list"></div>
+  </div>
+
+  <div class="page" id="pg-set">
+    <div class="set-card">
+      <div class="set-row">
+        <div>
+          <div style="font-size:14px;font-weight:600" id="set-name">-</div>
+          <div class="set-label" id="set-email">-</div>
+        </div>
+        <div style="font-size:24px">👤</div>
+      </div>
+    </div>
+    <div class="invite-card">
+      <div class="invite-card-title">💗 파트너 초대 링크</div>
+      <div class="invite-card-sub" id="invite-status-msg">링크를 파트너에게 보내세요</div>
+      <div class="invite-url" id="invite-url-set">-</div>
+      <button class="btn-invite-copy" onclick="copyInviteFromSet()">📋 링크 복사</button>
+    </div>
+    <div class="set-card">
+      <div class="set-row">
+        <span>파트너 연결 상태</span>
+        <span id="partner-status" style="font-size:13px;color:var(--muted)">확인 중...</span>
+      </div>
+      <div class="set-row">
+        <span>이번 달 거래 수</span>
+        <span id="total-count" style="font-size:13px;font-weight:600">0건</span>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">로그아웃</button>
+  </div>
+
+  <nav class="bnav">
+    <button class="bnav-btn act" onclick="goPage('home',this)"><span class="bnav-icon">🏠</span>홈</button>
+    <button class="bnav-btn" onclick="goPage('input',this)"><span class="bnav-icon">✏️</span>입력</button>
+    <button class="bnav-btn" onclick="goPage('hist',this)"><span class="bnav-icon">📋</span>내역</button>
+    <button class="bnav-btn" onclick="goPage('set',this)"><span class="bnav-icon">⚙️</span>설정</button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL = 'https://khfukldnyqvomyrniiww.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZnVrbGRueXF2b215cm5paXd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNTYwNjYsImV4cCI6MjA5MDYzMjA2Nn0.lItRdxBLx9Y7hulQ6QABoiDWclmB0uFy5Dw29hUU1Cw';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let ME = null, GROUP = null, PARTNER = null;
+let records = [], curM = new Date();
+let aWho = 1, aType = 'income', aCat = '', aFilter = 'all';
+let rtChannel = null;
+
+const CATS = {
+  income:  ['월급','부업','용돈','이자','환급','기타'],
+  expense: ['식비','카페','교통','쇼핑','의료','구독','외식','여가','기타'],
+  invest:  ['주식','ETF','펀드','코인','적금','기타'],
+  asset:   ['예금','부동산','주식잔고','현금','기타']
+};
+const TICO = {income:'💚',expense:'❤️',invest:'💜',asset:'💛'};
+const TBG  = {income:'#EDF9F3',expense:'#FEF2F2',invest:'#F5F0FE',asset:'#FEFBEE'};
+const TCOL = {income:'var(--green)',expense:'var(--red)',invest:'var(--purple)',asset:'var(--gold)'};
+
+// ── BOOT ────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  const params     = new URLSearchParams(location.search);
+  const inviteCode = params.get('invite');
+  const { data: { session } } = await sb.auth.getSession();
+
+  if (session) {
+    ME = session.user;
+    await loadProfile();
+    if (inviteCode) {
+      await joinGroup(inviteCode);
+      history.replaceState({}, '', location.pathname);
+    }
+    await loadGroup();
+    await loadTransactions();
+    showApp();
+  } else {
+    if (inviteCode) sessionStorage.setItem('pendingInvite', inviteCode);
+    showAuth();
+  }
+  document.getElementById('loading').style.display = 'none';
+});
+
+// ── AUTH ─────────────────────────────────────────────
+function showAuth() {
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+function switchTab(tab) {
+  document.getElementById('form-login').style.display  = tab==='login'  ? 'block':'none';
+  document.getElementById('form-signup').style.display = tab==='signup' ? 'block':'none';
+  document.getElementById('tab-login').classList.toggle('act', tab==='login');
+  document.getElementById('tab-signup').classList.toggle('act', tab==='signup');
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-pw').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-err');
+  if (!email||!pw) { err.textContent='이메일과 비밀번호를 입력해주세요'; return; }
+  btn.disabled=true; btn.textContent='로그인 중...'; err.textContent='';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if (error) {
+    err.textContent='이메일 또는 비밀번호가 틀렸어요';
+    btn.disabled=false; btn.textContent='로그인'; return;
+  }
+  ME = data.user;
+  await loadProfile();
+  const pending = sessionStorage.getItem('pendingInvite');
+  if (pending) { await joinGroup(pending); sessionStorage.removeItem('pendingInvite'); history.replaceState({},''，location.pathname); }
+  await loadGroup();
+  await loadTransactions();
+  document.getElementById('auth-screen').style.display='none';
+  showApp();
+}
+
+async function doSignup() {
+  const name  = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const pw    = document.getElementById('signup-pw').value;
+  const btn   = document.getElementById('signup-btn');
+  const err   = document.getElementById('signup-err');
+  const ok    = document.getElementById('signup-ok');
+  if (!name||!email||!pw) { err.textContent='모든 항목을 입력해주세요'; return; }
+  if (pw.length<6) { err.textContent='비밀번호는 6자 이상이어야 해요'; return; }
+  btn.disabled=true; btn.textContent='가입 중...'; err.textContent=''; ok.textContent='';
+
+  const { data, error } = await sb.auth.signUp({ email, password: pw });
+  if (error) {
+    err.textContent='가입 실패: '+(error.message.includes('already')?' 이미 사용 중인 이메일이에요':error.message);
+    btn.disabled=false; btn.textContent='가입하기'; return;
+  }
+  ME = data.user;
+
+  // ① 프로필 생성
+  const { error: profErr } = await sb.from('profiles').insert({ id: ME.id, display_name: name });
+  if (profErr && !profErr.message.includes('duplicate')) {
+    err.textContent='프로필 생성 실패: '+profErr.message;
+    btn.disabled=false; btn.textContent='가입하기'; return;
+  }
+  ME.profile = { display_name: name };
+
+  // ② 그룹 생성
+  const { data: grp, error: grpErr } = await sb.from('couple_groups')
+    .insert({ user1_id: ME.id }).select().single();
+  if (grpErr) {
+    err.textContent='그룹 생성 실패: '+grpErr.message;
+    btn.disabled=false; btn.textContent='가입하기'; return;
+  }
+  GROUP = grp;
+
+  document.getElementById('auth-screen').style.display='none';
+  showInviteScreen();
+}
+
+// ── INVITE ──────────────────────────────────────────
+function showInviteScreen() {
+  document.getElementById('invite-screen').style.display='flex';
+  const url = location.origin + location.pathname + '?invite=' + GROUP.invite_code;
+  document.getElementById('invite-url-display').textContent = url;
+}
+function copyInvite() {
+  const url = document.getElementById('invite-url-display').textContent;
+  navigator.clipboard.writeText(url).then(() => showToast('✅ 링크 복사됐어요! 파트너에게 보내세요 💗'));
+}
+function goApp() {
+  document.getElementById('invite-screen').style.display='none';
+  showApp();
+}
+
+async function joinGroup(code) {
+  const { data: grp } = await sb.from('couple_groups').select('*').eq('invite_code', code).single();
+  if (!grp || grp.user2_id || grp.user1_id === ME.id) return;
+  await sb.from('couple_groups').update({ user2_id: ME.id }).eq('id', grp.id);
+  // 프로필 없으면 생성
+  const { data: prof } = await sb.from('profiles').select('id').eq('id', ME.id).single();
+  if (!prof) {
+    const name = ME.email.split('@')[0];
+    await sb.from('profiles').upsert({ id: ME.id, display_name: name });
+  }
+}
+
+// ── LOAD ────────────────────────────────────────────
+async function loadProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', ME.id).single();
+  if (data) ME.profile = data;
+  else {
+    const name = ME.email.split('@')[0];
+    await sb.from('profiles').upsert({ id: ME.id, display_name: name });
+    ME.profile = { display_name: name };
+  }
+}
+
+async function loadGroup() {
+  const { data } = await sb.from('couple_groups').select('*')
+    .or(`user1_id.eq.${ME.id},user2_id.eq.${ME.id}`)
+    .order('created_at', { ascending: false }).limit(1).single();
+  GROUP = data;
+  if (!GROUP) return;
+  const partnerId = GROUP.user1_id === ME.id ? GROUP.user2_id : GROUP.user1_id;
+  if (partnerId) {
+    const { data: p } = await sb.from('profiles').select('*').eq('id', partnerId).single();
+    PARTNER = p;
+  }
+}
+
+async function loadTransactions() {
+  if (!GROUP) return;
+  const mk = mKey(curM);
+  const from = mk + '-01';
+  const to   = mk + '-31';
+  const { data } = await sb.from('transactions').select('*')
+    .eq('group_id', GROUP.id)
+    .gte('txn_date', from).lte('txn_date', to)
+    .order('txn_date', { ascending: false });
+  records = data || [];
+}
+
+function subscribeRealtime() {
+  if (!GROUP || rtChannel) return;
+  rtChannel = sb.channel('txn-'+GROUP.id)
+    .on('postgres_changes', { event:'*', schema:'public', table:'transactions', filter:`group_id=eq.${GROUP.id}` },
+      async (payload) => {
+        await loadTransactions();
+        renderAll();
+        if (payload.new?.user_id && payload.new.user_id !== ME.id) showToast('💗 파트너가 내역을 추가했어요!');
+      })
+    .subscribe();
+}
+
+// ── SHOW APP ─────────────────────────────────────────
+function showApp() {
+  document.getElementById('app').style.display = 'block';
+  applyNames();
+  document.getElementById('f-date').value = tod();
+  renderAll();
+  renderSettings();
+  subscribeRealtime();
+}
+
+function applyNames() {
+  const myName = ME?.profile?.display_name || '나';
+  const ptName = PARTNER?.display_name || '파트너';
+  document.getElementById('hb1').textContent  = myName;
+  document.getElementById('mn1').textContent  = myName;
+  document.getElementById('wbt1').textContent = myName;
+  document.getElementById('hb2').textContent  = ptName;
+  document.getElementById('mn2').textContent  = ptName;
+  document.getElementById('wbt2').textContent = ptName;
+
+  if (!PARTNER) {
+    document.getElementById('h-sep').style.display   = 'none';
+    document.getElementById('hb2').style.display     = 'none';
+    document.getElementById('mcard2').style.display  = 'none';
+    document.getElementById('who-toggle').style.display = 'none';
+  } else {
+    document.getElementById('h-sep').style.display   = '';
+    document.getElementById('hb2').style.display     = '';
+    document.getElementById('mcard2').style.display  = '';
+    document.getElementById('who-toggle').style.display = '';
+  }
+}
+
+// ── HELPERS ──────────────────────────────────────────
+function tod() { return new Date().toISOString().split('T')[0]; }
+function fmt(n) {
+  if (!n) return '₩0';
+  const abs = Math.abs(n);
+  let s = abs >= 100000000 ? '₩'+(abs/100000000).toFixed(1)+'억'
+        : abs >= 10000     ? '₩'+Math.round(abs/10000).toLocaleString()+'만'
+                           : '₩'+abs.toLocaleString();
+  return n < 0 ? '-'+s : s;
+}
+function mKey(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function mLbl(d) { return d.getFullYear()+'년 '+(d.getMonth()+1)+'월'; }
+function sm(arr, type) { return arr.filter(x=>x.type===type).reduce((a,x)=>a+Number(x.amount),0); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+// ── NAV ──────────────────────────────────────────────
+function goPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('act'));
+  document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('act'));
+  document.getElementById('pg-'+id).classList.add('act');
+  btn.classList.add('act');
+  if (id==='set') renderSettings();
+}
+function shiftM(d) {
+  curM = new Date(curM.getFullYear(), curM.getMonth()+d, 1);
+  loadTransactions().then(renderAll);
+}
+
+// ── RENDER ───────────────────────────────────────────
+function renderAll() {
+  const ml = mLbl(curM);
+  ['mlbl','mlbl2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=ml;});
+  const myR = records.filter(r=>r.user_id===ME.id);
+  const ptR = records.filter(r=>r.user_id!==ME.id);
+  const mi=sm(myR,'income'), me2=sm(myR,'expense');
+  const pi=sm(ptR,'income'), pe=sm(ptR,'expense');
+  const ti=mi+pi, te=me2+pe;
+  const myName = ME?.profile?.display_name||'나';
+  const ptName = PARTNER?.display_name||'파트너';
+  document.getElementById('h-sub').textContent = PARTNER ? myName+' + '+ptName+' 합산' : myName;
+  document.getElementById('h-total').textContent = fmt(ti-te);
+  document.getElementById('h-inc').textContent   = fmt(ti);
+  document.getElementById('h-exp').textContent   = fmt(te);
+  document.getElementById('h-bal').textContent   = fmt(ti-te);
+  document.getElementById('c1i').textContent = fmt(mi);
+  document.getElementById('c1e').textContent = fmt(me2);
+  document.getElementById('c1b').textContent = fmt(mi-me2);
+  document.getElementById('c2i').textContent = fmt(pi);
+  document.getElementById('c2e').textContent = fmt(pe);
+  document.getElementById('c2b').textContent = fmt(pi-pe);
+  renderHomeList();
+  renderHistList();
+  renderCats();
+}
+
+function txHTML(r) {
+  const isMe = r.user_id === ME.id;
+  const who  = isMe ? (ME?.profile?.display_name||'나') : (PARTNER?.display_name||'파트너');
+  const wc   = isMe ? 'var(--p1)' : 'var(--p2)';
+  const sign = r.type==='income' ? '+' : '-';
+  return `<div class="txitem">
+    <div class="tx-ico" style="background:${TBG[r.type]||'#F5F5F5'}">${TICO[r.type]||'📝'}</div>
+    <div class="tx-body">
+      <div class="tx-name">${r.memo}${r.category?' · '+r.category:''}</div>
+      <div class="tx-meta">${r.txn_date}${r.note?' · '+r.note:''}</div>
+    </div>
+    <div class="tx-r">
+      <div class="tx-amt" style="color:${TCOL[r.type]||'#888'}">${sign}${fmt(Number(r.amount))}</div>
+      <div class="tx-who" style="color:${wc}">${who}</div>
+    </div>
+    ${isMe?`<button class="del-btn" onclick="delRecord('${r.id}')">🗑</button>`:''}
+  </div>`;
+}
+
+function renderHomeList() {
+  const el = document.getElementById('home-list');
+  const s  = [...records].sort((a,b)=>b.txn_date.localeCompare(a.txn_date)).slice(0,8);
+  el.innerHTML = s.length ? s.map(txHTML).join('') :
+    '<div class="empty"><div class="empty-ico">📝</div><div class="empty-txt">아직 내역이 없어요<br>입력 탭에서 추가해보세요!</div></div>';
+}
+function renderHistList() {
+  const el = document.getElementById('hist-list');
+  let r = [...records];
+  if (aFilter==='mine')    r=r.filter(x=>x.user_id===ME.id);
+  else if (aFilter==='partner') r=r.filter(x=>x.user_id!==ME.id);
+  else if (['income','expense','invest','asset'].includes(aFilter)) r=r.filter(x=>x.type===aFilter);
+  r.sort((a,b)=>b.txn_date.localeCompare(a.txn_date));
+  el.innerHTML = r.length ? r.map(txHTML).join('') :
+    '<div class="empty"><div class="empty-ico">🔍</div><div class="empty-txt">내역이 없어요</div></div>';
+}
+function renderCats() {
+  const el = document.getElementById('cat-row');
+  el.innerHTML = (CATS[aType]||[]).map(c=>
+    `<div class="cat-chip ${aCat===c?'sel':''}" onclick="pickCat('${c}')">${c}</div>`
+  ).join('');
+}
+function renderSettings() {
+  document.getElementById('set-name').textContent  = ME?.profile?.display_name||'-';
+  document.getElementById('set-email').textContent = ME?.email||'-';
+  document.getElementById('partner-status').textContent = PARTNER ? '💗 '+PARTNER.display_name+' 연결됨' : '아직 연결 안 됨';
+  document.getElementById('total-count').textContent = records.length+'건';
+  if (GROUP) {
+    const url = location.origin+location.pathname+'?invite='+GROUP.invite_code;
+    document.getElementById('invite-url-set').textContent = url;
+    document.getElementById('invite-status-msg').textContent = PARTNER
+      ? PARTNER.display_name+'님과 연결됐어요 💗'
+      : '파트너에게 이 링크를 보내세요';
+  }
+}
+
+// ── INPUT ────────────────────────────────────────────
+function setWho(n) { aWho=n; document.getElementById('wb1').classList.toggle('act',n===1); document.getElementById('wb2').classList.toggle('act',n===2); aCat=''; renderCats(); }
+function setType(t,el) { aType=t; document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('sel')); el.classList.add('sel'); aCat=''; renderCats(); }
+function pickCat(c) { aCat=c; renderCats(); }
+function setFilter(f,el) { aFilter=f; document.querySelectorAll('.fchip').forEach(c=>c.classList.remove('act')); el.classList.add('act'); renderHistList(); }
+
+async function addRecord() {
+  if (!GROUP) { showToast('⚠️ 잠시 후 다시 시도해주세요'); return; }
+  const memo = document.getElementById('f-memo').value.trim();
+  const amt  = parseFloat(document.getElementById('f-amt').value);
+  const date = document.getElementById('f-date').value;
+  if (!memo||!amt||!date) { showToast('⚠️ 내용, 금액, 날짜를 입력해주세요'); return; }
+  const targetId = (aWho===2 && PARTNER) ? PARTNER.id : ME.id;
+  const btn = document.getElementById('sub-btn');
+  btn.disabled=true; btn.textContent='저장 중...';
+  const { error } = await sb.from('transactions').insert({
+    group_id: GROUP.id, user_id: targetId, type: aType,
+    amount: amt, memo, category: aCat, txn_date: date,
+    note: document.getElementById('f-note').value.trim()
+  });
+  btn.disabled=false; btn.textContent='+ 추가하기';
+  if (error) { showToast('❌ 저장 실패: '+error.message); return; }
+  document.getElementById('f-memo').value='';
+  document.getElementById('f-amt').value='';
+  document.getElementById('f-note').value='';
+  aCat=''; renderCats();
+  await loadTransactions(); renderAll();
+  showToast('✅ 추가됐어요!');
+}
+
+async function delRecord(id) {
+  const { error } = await sb.from('transactions').delete().eq('id', id);
+  if (error) { showToast('❌ 삭제 실패'); return; }
+  await loadTransactions(); renderAll();
+  showToast('🗑 삭제됐어요');
+}
+
+async function doLogout() {
+  if (rtChannel) { sb.removeChannel(rtChannel); rtChannel=null; }
+  await sb.auth.signOut();
+  location.reload();
+}
+
+function copyInviteFromSet() {
+  const url = document.getElementById('invite-url-set').textContent;
+  navigator.clipboard.writeText(url).then(()=>showToast('✅ 링크 복사됐어요!'));
+}
+</script>
+</body>
+</html>
