@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>듀오월렛</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--p1:#E8735A;--p1b:#C9573F;--p1l:#FDF0ED;--p2:#5B8DE8;--p2l:#EDF2FD;--bg:#FBF8F5;--text:#2A2320;--muted:#A09590;--border:#EDE8E3;--green:#3BAD76;--red:#E85A5A;--purple:#9B74E8;--gold:#D4A843;--r:16px;--sh:0 2px 16px rgba(44,35,32,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+#loading{position:fixed;inset:0;background:linear-gradient(160deg,#FDF3F0,#EEF3FD);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+.ll{font-family:'Gaegu',cursive;font-size:52px;color:var(--p1);animation:pulse 1.5s ease infinite}
+.ls{font-size:14px;color:var(--muted);margin-top:12px}
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#FDF3F0,#EEF3FD)}
+.abox{background:#fff;border-radius:28px;padding:48px 40px;width:100%;max-width:400px;box-shadow:0 8px 48px rgba(44,35,32,.14);animation:fadeUp .5s ease}
+.logo{font-family:'Gaegu',cursive;font-size:44px;color:var(--p1);text-align:center;margin-bottom:6px}
+.logo-sub{text-align:center;font-size:13px;color:var(--muted);margin-bottom:36px}
+.atab{display:grid;grid-template-columns:1fr 1fr;background:var(--border);border-radius:12px;padding:4px;margin-bottom:24px}
+.atab-btn{padding:10px;border:none;border-radius:8px;background:transparent;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .2s}
+.atab-btn.act{background:#fff;color:var(--p1);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.fg{margin-bottom:16px}
+.fl{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;display:block;margin-bottom:6px}
+.fi{width:100%;padding:13px 14px;border:1.5px solid var(--border);border-radius:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:var(--text);background:var(--bg);outline:none;transition:border-color .2s}
+.fi:focus{border-color:var(--p1);background:#fff}
+.bp{width:100%;padding:15px;background:linear-gradient(135deg,var(--p1),var(--p1b));color:#fff;border:none;border-radius:12px;font-family:'Noto Sans KR',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .2s}
+.bp:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(232,115,90,.4)}
+.bp:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+.em{font-size:12px;text-align:center;margin-top:10px;min-height:18px;color:var(--red)}
+#invite-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#FDF3F0,#EEF3FD)}
+.ibox{background:#fff;border-radius:28px;padding:40px 36px;width:100%;max-width:420px;box-shadow:0 8px 48px rgba(44,35,32,.14);animation:fadeUp .5s ease;text-align:center}
+.ibox-title{font-family:'Gaegu',cursive;font-size:28px;margin-bottom:8px}
+.ibox-sub{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.7}
+.ilink{background:var(--bg);border:1.5px dashed var(--border);border-radius:12px;padding:12px 14px;font-size:12px;word-break:break-all;margin-bottom:12px;text-align:left;line-height:1.5}
+.bcopy{width:100%;padding:14px;background:var(--p1);color:#fff;border:none;border-radius:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px}
+.bskip{width:100%;padding:12px;background:transparent;color:var(--muted);border:1.5px solid var(--border);border-radius:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;cursor:pointer}
+.bskip:hover{border-color:var(--p1);color:var(--p1)}
+#app{display:none;min-height:100vh;padding-bottom:80px}
+.header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.h-logo{font-family:'Gaegu',cursive;font-size:26px;color:var(--p1)}
+.h-pair{display:flex;align-items:center;gap:6px}
+.hbadge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.hb1{background:var(--p1l);color:var(--p1)}.hb2{background:var(--p2l);color:var(--p2)}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;z-index:100}
+.bnav-btn{flex:1;padding:10px 4px 8px;border:none;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Noto Sans KR',sans-serif;font-size:10px;color:var(--muted);border-top:3px solid transparent}
+.bnav-btn.act{color:var(--p1);border-top-color:var(--p1)}
+.bni{font-size:20px}
+.page{display:none;padding:20px;max-width:680px;margin:0 auto;animation:fadeIn .2s ease}
+.page.act{display:block}
+.mnav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:20px}
+.mnav-btn{width:36px;height:36px;border:1px solid var(--border);background:#fff;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh)}
+.mnav-lbl{font-family:'Gaegu',cursive;font-size:22px}
+.hero{background:linear-gradient(135deg,#E8735A,#D4613D 40%,#5B8DE8);border-radius:22px;padding:28px 24px 24px;color:#fff;margin-bottom:18px;position:relative;overflow:hidden}
+.hero-sub{font-size:12px;opacity:.82;margin-bottom:5px}
+.hero-amt{font-family:'Gaegu',cursive;font-size:36px}
+.hero-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:18px}
+.hero-stat{background:rgba(255,255,255,.18);border-radius:12px;padding:10px 12px}
+.hs-l{font-size:10px;opacity:.8;margin-bottom:3px}
+.hs-v{font-size:15px;font-weight:600}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.mcard{background:#fff;border-radius:var(--r);padding:18px;box-shadow:var(--sh);border-left:5px solid var(--p1)}
+.mcard.c2{border-left-color:var(--p2)}
+.mcard-name{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin-bottom:14px}
+.mcdot{width:10px;height:10px;border-radius:50%;background:var(--p1)}
+.mcdot.d2{background:var(--p2)}
+.mst{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.mst:last-child{border-bottom:none}
+.mst-l{color:var(--muted)}.mst-v{font-weight:600}
+.cg{color:var(--green)}.cr{color:var(--red)}.co{color:var(--gold)}
+.stitle{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px;margin-top:6px}
+
+/* 총 자산 카드 */
+.asset-summary{background:#fff;border-radius:var(--r);padding:18px;box-shadow:var(--sh);margin-bottom:18px}
+.asset-summary-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.asset-summary-title{font-size:13px;font-weight:700;color:var(--text)}
+.asset-summary-total{font-family:'Gaegu',cursive;font-size:22px;color:var(--gold)}
+.asset-rows{display:flex;flex-direction:column;gap:0}
+.asset-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.asset-row:last-child{border-bottom:none}
+.asset-row:hover{background:var(--bg);margin:0 -8px;padding:8px 8px;border-radius:8px}
+.asset-row-left{display:flex;align-items:center;gap:8px}
+.asset-row-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.asset-row-name{font-size:13px;font-weight:500}
+.asset-row-who{font-size:10px;color:var(--muted)}
+.asset-row-amt{font-size:13px;font-weight:700;color:var(--gold)}
+.asset-more{text-align:center;padding:8px;font-size:12px;color:var(--p1);cursor:pointer;font-weight:500}
+
+/* 자산 상세 모달 */
+.modal-overlay{position:fixed;inset:0;background:rgba(42,35,32,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#fff;border-radius:24px 24px 0 0;padding:28px 24px 48px;width:100%;max-width:600px;animation:fadeUp .3s ease}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{border:none;background:var(--bg);border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;color:var(--muted)}
+.asset-detail-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.asset-detail-item:last-child{border-bottom:none}
+.adi-left .adi-name{font-size:14px;font-weight:600}
+.adi-left .adi-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.adi-amt{font-size:15px;font-weight:700;color:var(--gold)}
+.adi-who{font-size:10px;color:var(--muted);text-align:right;margin-top:2px}
+
+.txlist{display:flex;flex-direction:column;gap:8px}
+.txi{background:#fff;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh)}
+.tx-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.tx-body{flex:1;min-width:0}
+.tx-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.tx-r{text-align:right;flex-shrink:0}
+.tx-amt{font-size:15px;font-weight:700}
+.tx-who{font-size:10px;color:var(--muted);margin-top:2px}
+.dbtn{background:none;border:none;cursor:pointer;font-size:14px;color:var(--muted);padding:4px;opacity:0;transition:opacity .15s}
+.txi:hover .dbtn{opacity:1}
+.empty{text-align:center;padding:48px 20px}
+.ei{font-size:52px;margin-bottom:12px}
+.et{font-size:14px;color:var(--muted)}
+.fcard{background:#fff;border-radius:var(--r);padding:24px;box-shadow:var(--sh)}
+.tgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tbtn{padding:12px 6px;border:2px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;text-align:center;transition:all .18s}
+.tbtn.sel{border-color:var(--p1);background:var(--p1l)}
+.tbi{font-size:22px;display:block;margin-bottom:4px}
+.tbt{font-size:11px;font-weight:600;color:var(--muted)}
+.tbtn.sel .tbt{color:var(--p1)}
+.crow{display:flex;flex-wrap:wrap;gap:6px}
+.cchip{padding:6px 13px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;background:#fff;color:var(--muted);transition:all .15s}
+.cchip.sel{background:var(--p1);border-color:var(--p1);color:#fff}
+.sbtn{width:100%;padding:16px;background:linear-gradient(135deg,var(--p1),var(--p1b));color:#fff;border:none;border-radius:12px;font-family:'Noto Sans KR',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .2s}
+.sbtn:hover{transform:translateY(-2px)}
+.sbtn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.fbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.fchip{padding:6px 14px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;background:#fff;color:var(--muted);transition:all .15s}
+.fchip.act{background:var(--p1);border-color:var(--p1);color:#fff}
+.scard{background:#fff;border-radius:var(--r);padding:20px;box-shadow:var(--sh);margin-bottom:14px}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.srow:last-child{border-bottom:none}
+.icard{background:linear-gradient(135deg,var(--p1l),var(--p2l));border-radius:var(--r);padding:20px;margin-bottom:14px;border:1px solid var(--border)}
+.icard-t{font-size:15px;font-weight:700;margin-bottom:6px}
+.icard-s{font-size:12px;color:var(--muted);margin-bottom:14px}
+.iurl{background:#fff;border-radius:10px;padding:10px 12px;font-size:11px;word-break:break-all;margin-bottom:10px;border:1px solid var(--border);line-height:1.5}
+.bicopy{width:100%;padding:12px;background:var(--p1);color:#fff;border:none;border-radius:10px;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+.blogout{width:100%;padding:13px;background:transparent;color:var(--red);border:1.5px solid var(--red);border-radius:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:#fff;padding:12px 24px;border-radius:50px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="loading"><div class="ll">듀오월렛 💑</div><div class="ls">불러오는 중...</div></div>
+
+<div id="auth-screen" style="display:none">
+  <div class="abox">
+    <div class="logo">듀오월렛 💑</div>
+    <div class="logo-sub">각자 돈은 따로, 돈 관리는 같이</div>
+    <div class="atab">
+      <button class="atab-btn act" id="tab-login" onclick="switchTab('login')">로그인</button>
+      <button class="atab-btn" id="tab-signup" onclick="switchTab('signup')">회원가입</button>
+    </div>
+    <div id="form-login">
+      <div class="fg"><label class="fl">이메일</label><input class="fi" type="email" id="login-email" placeholder="이메일 입력"></div>
+      <div class="fg"><label class="fl">비밀번호</label><input class="fi" type="password" id="login-pw" placeholder="비밀번호 입력"></div>
+      <button class="bp" id="login-btn" onclick="doLogin()">로그인</button>
+      <div class="em" id="login-err"></div>
+    </div>
+    <div id="form-signup" style="display:none">
+      <div class="fg"><label class="fl">닉네임</label><input class="fi" type="text" id="signup-name" placeholder="앱에서 표시될 이름" maxlength="10"></div>
+      <div class="fg"><label class="fl">이메일</label><input class="fi" type="email" id="signup-email" placeholder="이메일 입력"></div>
+      <div class="fg"><label class="fl">비밀번호</label><input class="fi" type="password" id="signup-pw" placeholder="6자 이상"></div>
+      <button class="bp" id="signup-btn" onclick="doSignup()">가입하기</button>
+      <div class="em" id="signup-err"></div>
+    </div>
+  </div>
+</div>
+
+<div id="invite-screen" style="display:none">
+  <div class="ibox">
+    <div style="font-size:52px;margin-bottom:12px">🔗</div>
+    <div class="ibox-title">파트너를 초대할까요?</div>
+    <div class="ibox-sub">링크를 파트너에게 카카오톡으로 보내세요.<br>링크로 가입하면 자동으로 연결돼요!</div>
+    <div class="ilink" id="invite-url-display">링크 생성 중...</div>
+    <button class="bcopy" onclick="copyInvite()">📋 링크 복사하기</button>
+    <button class="bskip" onclick="goApp()">혼자 먼저 써볼게요 →</button>
+  </div>
+</div>
+
+<div id="app">
+  <header class="header">
+    <div class="h-logo">듀오월렛</div>
+    <div class="h-pair">
+      <span class="hbadge hb1" id="hb1">나</span>
+      <span id="h-sep" style="color:#A09590">💗</span>
+      <span class="hbadge hb2" id="hb2">파트너</span>
+    </div>
+  </header>
+
+  <!-- HOME -->
+  <div class="page act" id="pg-home">
+    <div class="mnav">
+      <button class="mnav-btn" onclick="shiftM(-1)">&#8249;</button>
+      <span class="mnav-lbl" id="mlbl"></span>
+      <button class="mnav-btn" onclick="shiftM(1)">&#8250;</button>
+    </div>
+    <div class="hero">
+      <div class="hero-sub" id="h-sub">합산</div>
+      <div class="hero-amt" id="h-total">&#8361;0</div>
+      <div class="hero-row">
+        <div class="hero-stat"><div class="hs-l">수입</div><div class="hs-v" id="h-inc">&#8361;0</div></div>
+        <div class="hero-stat"><div class="hs-l">지출</div><div class="hs-v" id="h-exp">&#8361;0</div></div>
+        <div class="hero-stat"><div class="hs-l">잔액</div><div class="hs-v" id="h-bal">&#8361;0</div></div>
+      </div>
+    </div>
+    <div class="mgrid">
+      <div class="mcard">
+        <div class="mcard-name"><div class="mcdot"></div><span id="mn1">나</span></div>
+        <div class="mst"><span class="mst-l">수입</span><span class="mst-v cg" id="c1i">&#8361;0</span></div>
+        <div class="mst"><span class="mst-l">지출</span><span class="mst-v cr" id="c1e">&#8361;0</span></div>
+        <div class="mst"><span class="mst-l">잔액</span><span class="mst-v co" id="c1b">&#8361;0</span></div>
+      </div>
+      <div class="mcard c2" id="mcard2">
+        <div class="mcard-name"><div class="mcdot d2"></div><span id="mn2">파트너</span></div>
+        <div class="mst"><span class="mst-l">수입</span><span class="mst-v cg" id="c2i">&#8361;0</span></div>
+        <div class="mst"><span class="mst-l">지출</span><span class="mst-v cr" id="c2e">&#8361;0</span></div>
+        <div class="mst"><span class="mst-l">잔액</span><span class="mst-v co" id="c2b">&#8361;0</span></div>
+      </div>
+    </div>
+
+    <!-- 총 자산 요약 -->
+    <div class="asset-summary" id="asset-summary-box">
+      <div class="asset-summary-top">
+        <div class="asset-summary-title">💰 총 자산</div>
+        <div class="asset-summary-total" id="asset-total-amt">&#8361;0</div>
+      </div>
+      <div id="asset-summary-rows"></div>
+      <div class="asset-more" id="asset-more-btn" onclick="openAssetModal()" style="display:none">전체보기 ›</div>
+    </div>
+
+    <div class="stitle">최근 내역</div>
+    <div class="txlist" id="home-list"></div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="page" id="pg-input">
+    <div class="fcard">
+      <div class="fg"><span class="fl">유형</span>
+        <div class="tgrid">
+          <div class="tbtn sel" onclick="setType('income',this)"><span class="tbi">💚</span><span class="tbt">수입</span></div>
+          <div class="tbtn" onclick="setType('expense',this)"><span class="tbi">❤️</span><span class="tbt">지출</span></div>
+          <div class="tbtn" onclick="setType('invest',this)"><span class="tbi">💜</span><span class="tbt">투자</span></div>
+          <div class="tbtn" onclick="setType('asset',this)"><span class="tbi">💛</span><span class="tbt">자산등록</span></div>
+        </div>
+      </div>
+      <div class="fg"><span class="fl">카테고리</span><div class="crow" id="cat-row"></div></div>
+      <div class="fg"><label class="fl">날짜</label><input class="fi" type="date" id="f-date"></div>
+      <div class="fg"><label class="fl">내용</label><input class="fi" type="text" id="f-memo" placeholder="예: 월급, 마트, 삼성전자 주식..."></div>
+      <div class="fg"><label class="fl">금액 (원)</label><input class="fi" type="number" id="f-amt" placeholder="0" min="0"></div>
+      <div class="fg"><label class="fl">메모 (선택)</label><input class="fi" type="text" id="f-note" placeholder="추가 메모"></div>
+      <button class="sbtn" id="sub-btn" onclick="addRecord()">+ 추가하기</button>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="page" id="pg-hist">
+    <div class="mnav">
+      <button class="mnav-btn" onclick="shiftM(-1)">&#8249;</button>
+      <span class="mnav-lbl" id="mlbl2"></span>
+      <button class="mnav-btn" onclick="shiftM(1)">&#8250;</button>
+    </div>
+    <div class="fbar">
+      <div class="fchip act" onclick="setFilter('all',this)">전체</div>
+      <div class="fchip" onclick="setFilter('mine',this)" id="fp1">내 내역</div>
+      <div class="fchip" onclick="setFilter('partner',this)" id="fp2">파트너</div>
+      <div class="fchip" onclick="setFilter('income',this)">수입</div>
+      <div class="fchip" onclick="setFilter('expense',this)">지출</div>
+      <div class="fchip" onclick="setFilter('invest',this)">투자</div>
+      <div class="fchip" onclick="setFilter('asset',this)">자산</div>
+    </div>
+    <div class="txlist" id="hist-list"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="page" id="pg-set">
+    <div class="scard">
+      <div class="srow">
+        <div><div style="font-size:14px;font-weight:600" id="set-name">-</div><div style="font-size:12px;color:var(--muted)" id="set-email">-</div></div>
+        <div style="font-size:24px">👤</div>
+      </div>
+    </div>
+    <div class="icard">
+      <div class="icard-t">💗 파트너 초대 링크</div>
+      <div class="icard-s" id="invite-status-msg">링크를 파트너에게 보내세요</div>
+      <div class="iurl" id="invite-url-set">-</div>
+      <button class="bicopy" onclick="copyInviteSet()">📋 링크 복사</button>
+    </div>
+    <div class="scard">
+      <div class="srow"><span>파트너 연결 상태</span><span id="partner-status" style="font-size:13px;color:var(--muted)">확인 중...</span></div>
+      <div class="srow"><span>이번 달 거래</span><span id="total-count" style="font-size:13px;font-weight:600">0건</span></div>
+    </div>
+    <button class="blogout" onclick="doLogout()">로그아웃</button>
+  </div>
+
+  <nav class="bnav">
+    <button class="bnav-btn act" onclick="goPage('home',this)"><span class="bni">🏠</span>홈</button>
+    <button class="bnav-btn" onclick="goPage('input',this)"><span class="bni">✏️</span>입력</button>
+    <button class="bnav-btn" onclick="goPage('hist',this)"><span class="bni">📋</span>내역</button>
+    <button class="bnav-btn" onclick="goPage('set',this)"><span class="bni">⚙️</span>설정</button>
+  </nav>
+</div>
+
+<!-- 자산 상세 모달 -->
+<div class="modal-overlay" id="asset-modal" style="display:none" onclick="closeAssetModal(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span>💰 자산 전체 목록</span>
+      <button class="modal-close" onclick="closeAssetModal()">✕</button>
+    </div>
+    <div id="asset-modal-rows"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var SURL = 'https://khfukldnyqvomyrniiww.supabase.co';
+var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZnVrbGRueXF2b215cm5paXd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNTYwNjYsImV4cCI6MjA5MDYzMjA2Nn0.lItRdxBLx9Y7hulQ6QABoiDWclmB0uFy5Dw29hUU1Cw';
+var sb = supabase.createClient(SURL, SKEY);
+var ME = null, GROUP = null, PARTNER = null, records = [], rtCh = null;
+var curM = new Date(), aType = 'income', aCat = '', aFilter = 'all';
+var CATS = {
+  income: ['월급','부업','용돈','이자','환급','기타'],
+  expense: ['식비','카페','교통','쇼핑','의료','구독','외식','여가','기타'],
+  invest: ['주식','ETF','펀드','코인','적금','기타'],
+  asset: ['예금','적금','부동산','주식잔고','현금','기타']
+};
+var TICO = {income:'💚',expense:'❤️',invest:'💜',asset:'💛'};
+var TBG = {income:'#EDF9F3',expense:'#FEF2F2',invest:'#F5F0FE',asset:'#FEFBEE'};
+var TCOL = {income:'var(--green)',expense:'var(--red)',invest:'var(--purple)',asset:'var(--gold)'};
+
+window.addEventListener('load', function() {
+  var params = new URLSearchParams(location.search);
+  var inv = params.get('invite');
+  sb.auth.getSession().then(function(res) {
+    var session = res.data.session;
+    if (session) {
+      ME = session.user;
+      loadProfile().then(function() {
+        var p = inv || sessionStorage.getItem('pendingInvite');
+        var chain = p ? joinGroup(p).then(function() {
+          sessionStorage.removeItem('pendingInvite');
+          history.replaceState({}, '', location.pathname);
+        }) : Promise.resolve();
+        chain.then(loadGroup).then(loadTransactions).then(showApp);
+      });
+    } else {
+      if (inv) sessionStorage.setItem('pendingInvite', inv);
+      showAuth();
+    }
+    document.getElementById('loading').style.display = 'none';
+  });
+});
+
+function showAuth() { document.getElementById('auth-screen').style.display = 'flex'; }
+
+function switchTab(tab) {
+  document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('form-signup').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('tab-login').classList.toggle('act', tab === 'login');
+  document.getElementById('tab-signup').classList.toggle('act', tab === 'signup');
+}
+
+function doLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var pw = document.getElementById('login-pw').value;
+  var btn = document.getElementById('login-btn');
+  var err = document.getElementById('login-err');
+  if (!email || !pw) { err.textContent = '이메일과 비밀번호를 입력해주세요'; return; }
+  btn.disabled = true; btn.textContent = '로그인 중...'; err.textContent = '';
+  sb.auth.signInWithPassword({email: email, password: pw}).then(function(res) {
+    if (res.error) { err.textContent = '이메일 또는 비밀번호가 틀렸어요'; btn.disabled = false; btn.textContent = '로그인'; return; }
+    ME = res.data.user;
+    loadProfile().then(function() {
+      var p = sessionStorage.getItem('pendingInvite');
+      var chain = p ? joinGroup(p).then(function() { sessionStorage.removeItem('pendingInvite'); history.replaceState({}, '', location.pathname); }) : Promise.resolve();
+      chain.then(loadGroup).then(loadTransactions).then(function() {
+        document.getElementById('auth-screen').style.display = 'none';
+        showApp();
+      });
+    });
+  });
+}
+
+function doSignup() {
+  var name = document.getElementById('signup-name').value.trim();
+  var email = document.getElementById('signup-email').value.trim();
+  var pw = document.getElementById('signup-pw').value;
+  var btn = document.getElementById('signup-btn');
+  var err = document.getElementById('signup-err');
+  if (!name || !email || !pw) { err.textContent = '모든 항목을 입력해주세요'; return; }
+  if (pw.length < 6) { err.textContent = '비밀번호는 6자 이상이어야 해요'; return; }
+  btn.disabled = true; btn.textContent = '가입 중...'; err.textContent = '';
+  sb.auth.signUp({email: email, password: pw}).then(function(res) {
+    if (res.error) { err.textContent = '가입 실패: ' + res.error.message; btn.disabled = false; btn.textContent = '가입하기'; return; }
+    ME = res.data.user;
+    sb.from('profiles').upsert({id: ME.id, display_name: name}).then(function() {
+      ME.profile = {display_name: name};
+      sb.from('couple_groups').insert({user1_id: ME.id}).select().single().then(function(g) {
+        if (g.error) { err.textContent = '그룹 생성 실패'; btn.disabled = false; btn.textContent = '가입하기'; return; }
+        GROUP = g.data;
+        document.getElementById('auth-screen').style.display = 'none';
+        showInviteScreen();
+      });
+    });
+  });
+}
+
+function showInviteScreen() {
+  document.getElementById('invite-screen').style.display = 'flex';
+  var url = location.origin + location.pathname + '?invite=' + GROUP.invite_code;
+  document.getElementById('invite-url-display').textContent = url;
+}
+function copyInvite() {
+  navigator.clipboard.writeText(document.getElementById('invite-url-display').textContent)
+    .then(function() { showToast('링크 복사됐어요! 파트너에게 보내세요 💗'); });
+}
+function goApp() { document.getElementById('invite-screen').style.display = 'none'; showApp(); }
+
+function joinGroup(code) {
+  return sb.from('couple_groups').select('*').eq('invite_code', code).single().then(function(res) {
+    var grp = res.data;
+    if (!grp || grp.user2_id || grp.user1_id === ME.id) return Promise.resolve();
+    return sb.from('couple_groups').update({user2_id: ME.id}).eq('id', grp.id).then(function() {
+      return sb.from('profiles').select('id').eq('id', ME.id).single().then(function(p) {
+        if (!p.data) return sb.from('profiles').upsert({id: ME.id, display_name: ME.email.split('@')[0]});
+      });
+    });
+  });
+}
+
+function loadProfile() {
+  return sb.from('profiles').select('*').eq('id', ME.id).single().then(function(res) {
+    if (res.data) { ME.profile = res.data; }
+    else { ME.profile = {display_name: ME.email.split('@')[0]}; return sb.from('profiles').upsert({id: ME.id, display_name: ME.profile.display_name}); }
+  });
+}
+
+function loadGroup() {
+  return sb.from('couple_groups').select('*')
+    .or('user1_id.eq.' + ME.id + ',user2_id.eq.' + ME.id)
+    .order('created_at', {ascending: false}).limit(1).single().then(function(res) {
+    GROUP = res.data;
+    if (!GROUP) return Promise.resolve();
+    var pid = GROUP.user1_id === ME.id ? GROUP.user2_id : GROUP.user1_id;
+    if (!pid) return Promise.resolve();
+    return sb.from('profiles').select('*').eq('id', pid).single().then(function(p) { PARTNER = p.data; });
+  });
+}
+
+function loadTransactions() {
+  if (!GROUP) return Promise.resolve();
+  var mk = mKey(curM);
+  return sb.from('transactions').select('*').eq('group_id', GROUP.id)
+    .gte('txn_date', mk + '-01').lte('txn_date', mk + '-31')
+    .order('txn_date', {ascending: false}).then(function(res) { records = res.data || []; });
+}
+
+function loadAllAssets() {
+  if (!GROUP) return Promise.resolve([]);
+  return sb.from('transactions').select('*').eq('group_id', GROUP.id).eq('type', 'asset')
+    .order('txn_date', {ascending: false}).then(function(res) { return res.data || []; });
+}
+
+function subscribeRealtime() {
+  if (!GROUP || rtCh) return;
+  rtCh = sb.channel('txn-' + GROUP.id)
+    .on('postgres_changes', {event: '*', schema: 'public', table: 'transactions', filter: 'group_id=eq.' + GROUP.id},
+      function(payload) {
+        loadTransactions().then(renderAll);
+        if (payload.new && payload.new.user_id !== ME.id) showToast('파트너가 내역을 추가했어요! 💗');
+      }).subscribe();
+}
+
+function showApp() {
+  document.getElementById('app').style.display = 'block';
+  applyNames();
+  document.getElementById('f-date').value = tod();
+  renderAll();
+  renderSet();
+  subscribeRealtime();
+}
+
+function applyNames() {
+  var my = ME && ME.profile ? ME.profile.display_name : '나';
+  var pt = PARTNER ? PARTNER.display_name : '파트너';
+  document.getElementById('hb1').textContent = my;
+  document.getElementById('mn1').textContent = my;
+  document.getElementById('hb2').textContent = pt;
+  document.getElementById('mn2').textContent = pt;
+  document.getElementById('fp1').textContent = '내 내역';
+  document.getElementById('fp2').textContent = pt;
+  var hasPt = !!PARTNER;
+  document.getElementById('h-sep').style.display = hasPt ? '' : 'none';
+  document.getElementById('hb2').style.display = hasPt ? '' : 'none';
+  document.getElementById('mcard2').style.display = hasPt ? '' : 'none';
+}
+
+function tod() { return new Date().toISOString().split('T')[0]; }
+function fmt(n) {
+  if (!n) return '\u20a90';
+  var a = Math.abs(n);
+  var s = a >= 100000000 ? '\u20a9' + (a/100000000).toFixed(1) + '\uc5b5'
+        : a >= 10000 ? '\u20a9' + Math.round(a/10000).toLocaleString() + '\ub9cc'
+        : '\u20a9' + a.toLocaleString();
+  return n < 0 ? '-' + s : s;
+}
+function mKey(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function mLbl(d) { return d.getFullYear() + '\ub144 ' + (d.getMonth()+1) + '\uc6d4'; }
+function sm(arr, type) { return arr.filter(function(x){return x.type===type;}).reduce(function(a,x){return a+Number(x.amount);},0); }
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');}, 2500);
+}
+
+function goPage(id, btn) {
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('act');});
+  document.querySelectorAll('.bnav-btn').forEach(function(b){b.classList.remove('act');});
+  document.getElementById('pg-'+id).classList.add('act');
+  btn.classList.add('act');
+  if (id === 'set') renderSet();
+  if (id === 'home') renderAssetSummary();
+}
+
+function shiftM(d) {
+  curM = new Date(curM.getFullYear(), curM.getMonth()+d, 1);
+  loadTransactions().then(renderAll);
+}
+
+function renderAll() {
+  var ml = mLbl(curM);
+  ['mlbl','mlbl2'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=ml;});
+  var myR = records.filter(function(r){return r.user_id===ME.id;});
+  var ptR = records.filter(function(r){return r.user_id!==ME.id;});
+  var mi=sm(myR,'income'), me2=sm(myR,'expense');
+  var pi=sm(ptR,'income'), pe=sm(ptR,'expense');
+  var ti=mi+pi, te=me2+pe;
+  var myN = ME&&ME.profile?ME.profile.display_name:'나';
+  var ptN = PARTNER?PARTNER.display_name:'';
+  document.getElementById('h-sub').textContent = ptN ? myN+' + '+ptN+' 합산' : myN;
+  document.getElementById('h-total').textContent = fmt(ti-te);
+  document.getElementById('h-inc').textContent = fmt(ti);
+  document.getElementById('h-exp').textContent = fmt(te);
+  document.getElementById('h-bal').textContent = fmt(ti-te);
+  document.getElementById('c1i').textContent = fmt(mi);
+  document.getElementById('c1e').textContent = fmt(me2);
+  document.getElementById('c1b').textContent = fmt(mi-me2);
+  document.getElementById('c2i').textContent = fmt(pi);
+  document.getElementById('c2e').textContent = fmt(pe);
+  document.getElementById('c2b').textContent = fmt(pi-pe);
+  renderHomeList();
+  renderHistList();
+  renderCats();
+  renderAssetSummary();
+}
+
+function renderAssetSummary() {
+  loadAllAssets().then(function(assets) {
+    var total = assets.reduce(function(a,x){return a+Number(x.amount);}, 0);
+    document.getElementById('asset-total-amt').textContent = fmt(total);
+    var el = document.getElementById('asset-summary-rows');
+    var moreBtn = document.getElementById('asset-more-btn');
+    if (!assets.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:12px 0">등록된 자산이 없어요<br><span style="font-size:12px">입력 탭에서 자산을 등록해보세요</span></div>';
+      moreBtn.style.display = 'none'; return;
+    }
+    var show = assets.slice(0, 3);
+    el.innerHTML = show.map(function(r) {
+      var isMe = r.user_id === ME.id;
+      var who = isMe ? (ME&&ME.profile?ME.profile.display_name:'나') : (PARTNER?PARTNER.display_name:'파트너');
+      var wc = isMe ? 'var(--p1)' : 'var(--p2)';
+      return '<div class="asset-row" onclick="openAssetModal()">'
+        + '<div class="asset-row-left">'
+        + '<div class="asset-row-ico" style="background:#FEFBEE">💛</div>'
+        + '<div><div class="asset-row-name">' + r.memo + (r.category?' · '+r.category:'') + '</div>'
+        + '<div class="asset-row-who" style="color:'+wc+'">'+who+'</div></div></div>'
+        + '<div class="asset-row-amt">' + fmt(Number(r.amount)) + '</div></div>';
+    }).join('');
+    moreBtn.style.display = assets.length > 3 ? 'block' : 'none';
+  });
+}
+
+function openAssetModal() {
+  loadAllAssets().then(function(assets) {
+    var el = document.getElementById('asset-modal-rows');
+    if (!assets.length) { el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">등록된 자산이 없어요</div>'; }
+    else {
+      el.innerHTML = assets.map(function(r) {
+        var isMe = r.user_id === ME.id;
+        var who = isMe ? (ME&&ME.profile?ME.profile.display_name:'나') : (PARTNER?PARTNER.display_name:'파트너');
+        var wc = isMe ? 'var(--p1)' : 'var(--p2)';
+        return '<div class="asset-detail-item">'
+          + '<div class="adi-left"><div class="adi-name">' + r.memo + '</div>'
+          + '<div class="adi-meta">' + (r.category||'자산') + ' · ' + r.txn_date + '</div></div>'
+          + '<div><div class="adi-amt">' + fmt(Number(r.amount)) + '</div>'
+          + '<div class="adi-who" style="color:'+wc+'">'+who+'</div></div></div>';
+      }).join('');
+    }
+    document.getElementById('asset-modal').style.display = 'flex';
+  });
+}
+
+function closeAssetModal(e) {
+  if (!e || e.target === document.getElementById('asset-modal')) {
+    document.getElementById('asset-modal').style.display = 'none';
+  }
+}
+
+function txHTML(r) {
+  var isMe = r.user_id === ME.id;
+  var who = isMe ? (ME&&ME.profile?ME.profile.display_name:'나') : (PARTNER?PARTNER.display_name:'파트너');
+  var wc = isMe ? 'var(--p1)' : 'var(--p2)';
+  var sign = r.type === 'income' ? '+' : '-';
+  var del = isMe ? '<button class="dbtn" onclick="delRecord(\''+r.id+'\')">🗑</button>' : '';
+  return '<div class="txi"><div class="tx-ico" style="background:'+(TBG[r.type]||'#f5f5f5')+'">'+(TICO[r.type]||'📝')+'</div>'
+    +'<div class="tx-body"><div class="tx-name">'+r.memo+(r.category?' · '+r.category:'')+'</div>'
+    +'<div class="tx-meta">'+r.txn_date+(r.note?' · '+r.note:'')+'</div></div>'
+    +'<div class="tx-r"><div class="tx-amt" style="color:'+(TCOL[r.type]||'#888')+'">'+sign+fmt(Number(r.amount))+'</div>'
+    +'<div class="tx-who" style="color:'+wc+'">'+who+'</div></div>'+del+'</div>';
+}
+
+function renderHomeList() {
+  var el = document.getElementById('home-list');
+  var s = records.filter(function(r){return r.type!=='asset';}).slice(0,8);
+  el.innerHTML = s.length ? s.map(txHTML).join('') : '<div class="empty"><div class="ei">📝</div><div class="et">아직 내역이 없어요</div></div>';
+}
+
+function renderHistList() {
+  var el = document.getElementById('hist-list');
+  var r = records.slice();
+  if (aFilter==='mine') r=r.filter(function(x){return x.user_id===ME.id;});
+  else if (aFilter==='partner') r=r.filter(function(x){return x.user_id!==ME.id;});
+  else if (['income','expense','invest','asset'].indexOf(aFilter)>=0) r=r.filter(function(x){return x.type===aFilter;});
+  r.sort(function(a,b){return b.txn_date.localeCompare(a.txn_date);});
+  el.innerHTML = r.length ? r.map(txHTML).join('') : '<div class="empty"><div class="ei">🔍</div><div class="et">내역이 없어요</div></div>';
+}
+
+function renderCats() {
+  var el = document.getElementById('cat-row');
+  var cats = CATS[aType] || [];
+  el.innerHTML = cats.map(function(c){
+    return '<div class="cchip'+(aCat===c?' sel':'')+'" onclick="pickCat(\''+c+'\')">'+c+'</div>';
+  }).join('');
+}
+
+function renderSet() {
+  document.getElementById('set-name').textContent = ME&&ME.profile?ME.profile.display_name:'-';
+  document.getElementById('set-email').textContent = ME?ME.email:'-';
+  document.getElementById('partner-status').textContent = PARTNER ? '💗 '+PARTNER.display_name+' 연결됨' : '아직 연결 안 됨';
+  document.getElementById('total-count').textContent = records.length+'건';
+  if (GROUP) {
+    var url = location.origin+location.pathname+'?invite='+GROUP.invite_code;
+    document.getElementById('invite-url-set').textContent = url;
+    document.getElementById('invite-status-msg').textContent = PARTNER ? PARTNER.display_name+'님과 연결됐어요 💗' : '파트너에게 이 링크를 보내세요';
+  }
+}
+
+function setType(t, el) {
+  aType = t;
+  document.querySelectorAll('.tbtn').forEach(function(b){b.classList.remove('sel');});
+  el.classList.add('sel');
+  aCat = ''; renderCats();
+}
+function pickCat(c) { aCat = c; renderCats(); }
+function setFilter(f, el) {
+  aFilter = f;
+  document.querySelectorAll('.fchip').forEach(function(c){c.classList.remove('act');});
+  el.classList.add('act');
+  renderHistList();
+}
+
+function addRecord() {
+  if (!GROUP) { showToast('잠시 후 다시 시도해주세요'); return; }
+  var memo = document.getElementById('f-memo').value.trim();
+  var amt = parseFloat(document.getElementById('f-amt').value);
+  var date = document.getElementById('f-date').value;
+  if (!memo || !amt || !date) { showToast('내용, 금액, 날짜를 입력해주세요'); return; }
+  var btn = document.getElementById('sub-btn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  sb.from('transactions').insert({
+    group_id: GROUP.id, user_id: ME.id, type: aType,
+    amount: amt, memo: memo, category: aCat, txn_date: date,
+    note: document.getElementById('f-note').value.trim()
+  }).then(function(res) {
+    btn.disabled = false; btn.textContent = '+ 추가하기';
+    if (res.error) { showToast('저장 실패: '+res.error.message); return; }
+    document.getElementById('f-memo').value = '';
+    document.getElementById('f-amt').value = '';
+    document.getElementById('f-note').value = '';
+    aCat = ''; renderCats();
+    loadTransactions().then(renderAll);
+    showToast('추가됐어요! ✅');
+  });
+}
+
+function delRecord(id) {
+  sb.from('transactions').delete().eq('id', id).then(function(res) {
+    if (res.error) { showToast('삭제 실패'); return; }
+    loadTransactions().then(renderAll);
+    showToast('삭제됐어요');
+  });
+}
+
+function doLogout() {
+  if (rtCh) { sb.removeChannel(rtCh); rtCh = null; }
+  sb.auth.signOut().then(function() { location.reload(); });
+}
+
+function copyInviteSet() {
+  navigator.clipboard.writeText(document.getElementById('invite-url-set').textContent)
+    .then(function() { showToast('링크 복사됐어요! 💗'); });
+}
+</script>
+</body>
+</html>
