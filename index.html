@@ -444,6 +444,9 @@ function loadGroup() {
   });
 }
 
+function mKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function mLbl(d) { return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월'; }
+  
 function loadTransactions() {
   if (!GROUP) return Promise.resolve();
   var mk = mKey(curM);
@@ -503,8 +506,6 @@ function fmt(n) {
   return n < 0 ? '-' + s : s;
 }
 
-function mKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
-function mLbl(d) { return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월'; }
 function sm(arr, type) { return arr.filter(function(x) { return x.type === type; }).reduce(function(a, x) { return a + Number(x.amount); }, 0); }
 
 function showToast(msg) {
